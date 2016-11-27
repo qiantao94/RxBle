@@ -49,8 +49,8 @@ public class MainActivity extends AppCompatActivity {
 //        });
         mRxBle.receiveData().subscribe(new Action1<String>() {
             @Override
-            public void call(String data) {
-                sendTv.setText(mStringBuffer.append(data).append("\n"));
+            public void call(String receiveData) {
+                sendTv.setText(mStringBuffer.append(receiveData).append("\n"));
             }
         });
     }

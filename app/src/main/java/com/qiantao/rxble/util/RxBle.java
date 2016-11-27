@@ -60,7 +60,7 @@ public class RxBle {
     }
 
     /**
-     * 初始化蓝牙设备
+     * 初始化手机蓝牙设备
      *
      * @param context context
      */
@@ -75,7 +75,7 @@ public class RxBle {
     }
 
     /**
-     * 扫描并连接蓝牙设备
+     * 扫描蓝牙设备
      *
      * @param enable 开启或关闭扫描
      */
