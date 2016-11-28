@@ -104,9 +104,11 @@ public class RxBle {
         @Override
         public void onLeScan(BluetoothDevice bleDevice, int rssi, byte[] scanRecord) {
             if (mIsScanning) {
-                Log.d(TAG, "onLeScan：找到设备" + bleDevice.getName());
-                if (mTargetDeviceName.equals(bleDevice.getName())) {
-                    connectDevice(bleDevice);
+                if (bleDevice.getName() != null) {
+                    Log.d(TAG, "onLeScan：找到设备" + bleDevice.getName());
+                    if (mTargetDeviceName.equals(bleDevice.getName())) {
+                        connectDevice(bleDevice);
+                    }
                 }
             } else {
                 Log.d(TAG, "onLeScan: 停止扫描");
@@ -223,8 +225,8 @@ public class RxBle {
     public void closeBle() {
         Log.d(TAG, "关闭所有蓝牙模块");
         if (mBleGatt != null) {
-            mBleGatt.disconnect();
             mBleGatt.close();
+            mBleGatt.disconnect();
         }
         if (mBleAdapter != null) {
             mBleAdapter.cancelDiscovery();
