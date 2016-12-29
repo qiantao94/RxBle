@@ -36,16 +36,27 @@ public class RxBle {
 
     private BluetoothAdapter mBleAdapter;
     private boolean mIsScanning;
-//    private String mTargetDeviceName;
+    private static String sTargetDeviceName;
     private BluetoothGatt mBleGatt;
     private BluetoothGattCharacteristic mBleGattChar;
-    private List<BluetoothDevice> mBluetoothDeviceList;
 
     private Subject<String, String> mBus;
 
+    public interface BleScanListener {
+        void onBleScan(BluetoothDevice bleDevice, int rssi, byte[] scanRecord);
+    }
+
+    private BleScanListener mScanListener;
+
+    /**
+     * Set listener on device scanning
+     * @param scanListener Use it's method {onBleScan} todo
+     */
+    public void setScanListener(BleScanListener scanListener) {
+        mScanListener = scanListener;
+    }
+
     private RxBle() {
-//        mTargetDeviceName = "Test";
-        mBluetoothDeviceList = new ArrayList<>();
         mBus = new SerializedSubject<>(PublishSubject.<String>create());
     }
 
@@ -53,12 +64,17 @@ public class RxBle {
         return Singleton.INSTANCE;
     }
 
+    public RxBle setTargetDevice(String deviceName) {
+        sTargetDeviceName = deviceName;
+        return Singleton.INSTANCE;
+    }
+
     private static class Singleton {
         private static final RxBle INSTANCE = new RxBle();
     }
 
-    public void initBle(Context context) {
-        this.mContext = context.getApplicationContext();
+    public void openBle(Context context) {
+        mContext = context.getApplicationContext();
         BluetoothManager bluetoothManager =
                 (BluetoothManager) this.mContext.getSystemService(Context.BLUETOOTH_SERVICE);
         mBleAdapter = bluetoothManager.getAdapter();
@@ -94,10 +110,11 @@ public class RxBle {
             if (mIsScanning) {
                 if (bleDevice.getName() != null) {
                     Log.d(TAG, "onLeScan: find device: " + bleDevice.getName());
-//                    if (mTargetDeviceName.equals(bleDevice.getName())) {
-//                        connectDevice(bleDevice);
-//                    }
-                    mBluetoothDeviceList.add(bleDevice);
+                    if (sTargetDeviceName != null && sTargetDeviceName.equals(bleDevice.getName())) {
+                        connectDevice(bleDevice);
+                    } else if (mScanListener != null) {
+                        mScanListener.onBleScan(bleDevice, rssi, scanRecord);
+                    }
                 }
             } else {
                 Log.d(TAG, "onLeScan: stop scan");
@@ -105,16 +122,10 @@ public class RxBle {
         }
     };
 
-    /**
-     * Get list of BLE devices
-     * @return List of devices
-     */
-    public List<BluetoothDevice> getBleDevices(){
-        return mBluetoothDeviceList;
-    }
 
     /**
      * Connect BLE devices
+     *
      * @param bleDevice Target device you want to connect
      */
     public void connectDevice(BluetoothDevice bleDevice) {
@@ -137,7 +148,7 @@ public class RxBle {
             Log.d(TAG, "onConnectionStateChange: " + newState);
             if (newState == BluetoothGatt.STATE_CONNECTED) {
                 Log.d(TAG, "onConnectionStateChange: device connected");
-                //Discover services will call the next override function: onServicesDiscovered
+                //Discover services will call the next override method: onServicesDiscovered
                 bleGatt.discoverServices();
             } else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
                 Log.d(TAG, "onConnectionStateChange: device disconnected");
@@ -222,6 +233,7 @@ public class RxBle {
 
     /**
      * Receive the data from BLE device
+     *
      * @return Subject you should subscribed
      */
     public Observable<String> receiveData() {

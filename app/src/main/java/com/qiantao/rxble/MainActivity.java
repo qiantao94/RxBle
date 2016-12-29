@@ -1,5 +1,6 @@
 package com.qiantao.rxble;
 
+import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
@@ -38,19 +39,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         mStringBuffer = new StringBuffer();
-        mRxBle = RxBle.getInstance();
-        mRxBle.initBle(this);
+        mRxBle = RxBle.getInstance().setTargetDevice("Test");
+        mRxBle.openBle(this);
         mRxBle.scanBleDevices(true);
-//        mRxBle.setBleDataListener(new BleDataListener() {
-//            @Override
-//            public void onDataReceive(String data) {
-//                sendTv.setText(mStringBuffer.append(data).append("\n"));
-//            }
-//        });
         mRxBle.receiveData().subscribe(new Action1<String>() {
             @Override
             public void call(String receiveData) {
                 sendTv.setText(mStringBuffer.append(receiveData).append("\n"));
+            }
+        });
+        mRxBle.setScanListener(new RxBle.BleScanListener() {
+            @Override
+            public void onBleScan(BluetoothDevice bleDevice, int rssi, byte[] scanRecord) {
+                // Get list of devices and other information
             }
         });
     }
