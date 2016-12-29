@@ -8,7 +8,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.qiantao.rxble.util.RxBle;
+import com.qiantao.rxble.ble.RxBle;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;

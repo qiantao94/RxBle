@@ -1,4 +1,4 @@
-package com.qiantao.rxble.util;
+package com.qiantao.rxble.ble;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -10,6 +10,7 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.util.Log;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -23,7 +24,7 @@ import rx.subjects.Subject;
 
 /**
  * Created by qiantao on 2016/11/24.
- * 低功耗蓝牙使用RxJava
+ * Use RxJava help Bluetooth Low Energy device to communicate with your Android phone
  */
 
 public class RxBle {
@@ -31,23 +32,20 @@ public class RxBle {
     private static final long SCAN_PERIOD = 10000;
     private static final String TAG = RxBle.class.getSimpleName();
     private static final String UUID = "0000ffe1-0000-1000-8000-00805f9b34fb";
+    private Context mContext;
 
     private BluetoothAdapter mBleAdapter;
     private boolean mIsScanning;
-    private String mTargetDeviceName;
-    private Context mContext;
+//    private String mTargetDeviceName;
     private BluetoothGatt mBleGatt;
     private BluetoothGattCharacteristic mBleGattChar;
-//    private BleDataListener mBleDataListener;
+    private List<BluetoothDevice> mBluetoothDeviceList;
 
     private Subject<String, String> mBus;
 
-//    public void setBleDataListener(BleDataListener bleDataListener) {
-//        mBleDataListener = bleDataListener;
-//    }
-
     private RxBle() {
-        mTargetDeviceName = "Test";
+//        mTargetDeviceName = "Test";
+        mBluetoothDeviceList = new ArrayList<>();
         mBus = new SerializedSubject<>(PublishSubject.<String>create());
     }
 
@@ -59,11 +57,6 @@ public class RxBle {
         private static final RxBle INSTANCE = new RxBle();
     }
 
-    /**
-     * 初始化手机蓝牙设备
-     *
-     * @param context context
-     */
     public void initBle(Context context) {
         this.mContext = context.getApplicationContext();
         BluetoothManager bluetoothManager =
@@ -74,14 +67,9 @@ public class RxBle {
         }
     }
 
-    /**
-     * 扫描蓝牙设备
-     *
-     * @param enable 开启或关闭扫描
-     */
     public void scanBleDevices(boolean enable) {
         if (enable) {
-            Log.d(TAG, "scanBleDevices: 扫描蓝牙");
+            Log.d(TAG, "scanBleDevices");
             mIsScanning = true;
             mBleAdapter.startLeScan(mBleScanCallback);
             Observable.timer(SCAN_PERIOD, TimeUnit.MILLISECONDS).subscribe(new Action1<Long>() {
@@ -98,56 +86,67 @@ public class RxBle {
     }
 
     /**
-     * 搜索到蓝牙设备后的回调
+     * Callback when scanning BLE devices
      */
     private BluetoothAdapter.LeScanCallback mBleScanCallback = new BluetoothAdapter.LeScanCallback() {
         @Override
         public void onLeScan(BluetoothDevice bleDevice, int rssi, byte[] scanRecord) {
             if (mIsScanning) {
                 if (bleDevice.getName() != null) {
-                    Log.d(TAG, "onLeScan：找到设备" + bleDevice.getName());
-                    if (mTargetDeviceName.equals(bleDevice.getName())) {
-                        connectDevice(bleDevice);
-                    }
+                    Log.d(TAG, "onLeScan: find device: " + bleDevice.getName());
+//                    if (mTargetDeviceName.equals(bleDevice.getName())) {
+//                        connectDevice(bleDevice);
+//                    }
+                    mBluetoothDeviceList.add(bleDevice);
                 }
             } else {
-                Log.d(TAG, "onLeScan: 停止扫描");
+                Log.d(TAG, "onLeScan: stop scan");
             }
         }
     };
 
     /**
-     * 连接搜索到的蓝牙设备
-     *
-     * @param bleDevice 目标蓝牙设备
+     * Get list of BLE devices
+     * @return List of devices
      */
-    private void connectDevice(BluetoothDevice bleDevice) {
-        scanBleDevices(false);
-        mBleGatt = bleDevice.connectGatt(mContext, true, new BleGattCallback());//true代表自动连接，能断开重连
-        mBleGatt.connect();
-        Log.d(TAG, "开始连接设备：" + mBleGatt.getDevice().getName());
+    public List<BluetoothDevice> getBleDevices(){
+        return mBluetoothDeviceList;
     }
 
     /**
-     * 蓝牙连接后的回调方法，包括连接状态、发现服务、接收数据
+     * Connect BLE devices
+     * @param bleDevice Target device you want to connect
+     */
+    public void connectDevice(BluetoothDevice bleDevice) {
+        scanBleDevices(false);
+        mBleGatt = bleDevice.connectGatt(mContext,
+                true,//true mean that can auto reconnect after disconnect
+                new BleGattCallback());
+        mBleGatt.connect();
+        Log.d(TAG, "connectDevice: start to connect " + mBleGatt.getDevice().getName());
+    }
+
+    /**
+     * Callback after device has been connected
      */
     private class BleGattCallback extends BluetoothGattCallback {
 
         @Override
         public void onConnectionStateChange(BluetoothGatt bleGatt, int status, int newState) {
             super.onConnectionStateChange(bleGatt, status, newState);
-            Log.d(TAG, "onConnectionStateChange: 连接状态: " + newState);
-            if (newState == BluetoothGatt.STATE_CONNECTED) {//连接成功
-                Log.d(TAG, "onConnectionStateChange: 设备连接");
-                bleGatt.discoverServices();//搜索服务
-            } else if (newState == BluetoothGatt.STATE_DISCONNECTED) {//断开连接
-                Log.d(TAG, "onConnectionStateChange: 设备断开");
+            Log.d(TAG, "onConnectionStateChange: " + newState);
+            if (newState == BluetoothGatt.STATE_CONNECTED) {
+                Log.d(TAG, "onConnectionStateChange: device connected");
+                //Discover services will call the next override function: onServicesDiscovered
+                bleGatt.discoverServices();
+            } else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
+                Log.d(TAG, "onConnectionStateChange: device disconnected");
             }
         }
 
         @Override
         public void onServicesDiscovered(final BluetoothGatt bleGatt, int status) {
-            Log.d(TAG, "onServicesDiscovered: 查找服务: " + bleGatt.getServices().size());
+            Log.d(TAG, "onServicesDiscovered: services size: " + bleGatt.getServices().size());
             List<BluetoothGattService> serviceList = bleGatt.getServices();
             Observable.from(serviceList)
                     .flatMap(new Func1<BluetoothGattService, Observable<BluetoothGattCharacteristic>>() {
@@ -165,7 +164,8 @@ public class RxBle {
                     .subscribe(new Action1<BluetoothGattCharacteristic>() {
                         @Override
                         public void call(BluetoothGattCharacteristic bleGattChar) {
-                            bleGatt.setCharacteristicNotification(bleGattChar, true);//设置开启接受蓝牙数据
+                            //
+                            bleGatt.setCharacteristicNotification(bleGattChar, true);
                             mBleGattChar = bleGattChar;
                         }
                     });
@@ -175,31 +175,36 @@ public class RxBle {
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             Log.d(TAG, "onCharacteristicChanged");
             String receiveData = new String(characteristic.getValue());
-            Log.d(TAG, "收到蓝牙发来数据：" + receiveData);
-//            if (mBleDataListener != null) {
+            Log.d(TAG, "receive BLE 's data :" + receiveData);
             Observable.just(receiveData)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Action1<String>() {
                         @Override
                         public void call(String receiveData) {
-//                                mBleDataListener.onDataReceive(receiveData);
                             mBus.onNext(receiveData);
                         }
                     });
-//            }
         }
     }
 
+    /**
+     * Send data to BLE device
+     *
+     * @param data the data will send to BLE device
+     */
+    public void sendData(String data) {
+        sendData(data, 0);
+    }
 
     /**
-     * 发送蓝牙数据（延时）
+     * Send data to BLE device with delay
      *
-     * @param data 要发送的数据
-     * @param time 延迟时间（毫秒）
+     * @param data String will be send to BLE device
+     * @param time Delay time , milliseconds
      */
     public void sendData(final String data, long time) {
         if (!mBleAdapter.isEnabled() || mBleAdapter == null || !mBleGatt.connect()) {
-            Log.d(TAG, "sendData: 蓝牙未连接");
+            Log.d(TAG, "sendData: BLE is disconnected");
             return;
         }
         Observable.timer(time, TimeUnit.MILLISECONDS)
@@ -209,21 +214,22 @@ public class RxBle {
                         if (mBleGatt != null && mBleGattChar != null) {
                             mBleGattChar.setValue(data);
                             boolean isSend = mBleGatt.writeCharacteristic(mBleGattChar);
-                            Log.d(TAG, "发送：" + (isSend ? "成功" : "失败"));
+                            Log.d(TAG, "send " + (isSend ? "success" : "fail"));
                         }
                     }
                 });
     }
 
+    /**
+     * Receive the data from BLE device
+     * @return Subject you should subscribed
+     */
     public Observable<String> receiveData() {
         return mBus;
     }
 
-    /**
-     * 关闭蓝牙
-     */
     public void closeBle() {
-        Log.d(TAG, "关闭所有蓝牙模块");
+        Log.d(TAG, "close BLE");
         if (mBleGatt != null) {
             mBleGatt.close();
             mBleGatt.disconnect();
@@ -231,5 +237,6 @@ public class RxBle {
         if (mBleAdapter != null) {
             mBleAdapter.cancelDiscovery();
         }
+        mBus.onCompleted();
     }
 }
