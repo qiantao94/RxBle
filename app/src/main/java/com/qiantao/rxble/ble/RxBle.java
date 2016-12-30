@@ -10,7 +10,6 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.util.Log;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -43,6 +42,12 @@ public class RxBle {
     private Subject<String, String> mBus;
 
     public interface BleScanListener {
+        /**
+         * Callback in BLE scanning,then you should use the method {@link #connectDevice} to connect target device
+         * @param bleDevice Identifies the remote device
+         * @param rssi The RSSI value for the remote device as reported by the Bluetooth hardware. 0 if no RSSI value is available
+         * @param scanRecord The content of the advertisement record offered by the remote device.
+         */
         void onBleScan(BluetoothDevice bleDevice, int rssi, byte[] scanRecord);
     }
 
@@ -50,7 +55,7 @@ public class RxBle {
 
     /**
      * Set listener on device scanning
-     * @param scanListener Use it's method {onBleScan} todo
+     * @param scanListener Listener of scaning
      */
     public void setScanListener(BleScanListener scanListener) {
         mScanListener = scanListener;
