@@ -51,7 +51,8 @@ public class MainActivity extends AppCompatActivity {
         mRxBle.setScanListener(new RxBle.BleScanListener() {
             @Override
             public void onBleScan(BluetoothDevice bleDevice, int rssi, byte[] scanRecord) {
-                // Get list of devices and other information
+                //If you don't use the method {setTargetDevice}
+                // You can get list of devices and other information here
             }
         });
     }
