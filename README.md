@@ -9,7 +9,7 @@ Make sure your project has been introduced RxJava in `build.gradle`,like this:
 compile 'io.reactivex:rxjava:1.2.3'
 compile 'io.reactivex:rxandroid:1.2.1'
 ```
-Then you can copy `RxBle.java` to your project.
+And copy `RxBle.java` to your project.
 ## USEAGE
 1.Get the singleton of the RxBle
 ```java
