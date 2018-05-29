@@ -3,9 +3,6 @@
 # RxBle
 
 #### Program Android BLE function with RxJava 
-</br></br>
-![](https://github.com/bestTao/RxBle/blob/master/design.png?raw=true)
-</br></br>
 ## SETUP
 Make sure your project has been introduced RxJava in `build.gradle`,like this:
 ```gradle
